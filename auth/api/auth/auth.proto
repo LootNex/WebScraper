@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "pkg/pb/auth;auth";
+
+service Auth_V1{
+    rpc Register (RegisterRequest) returns (RegisterResponse) {}
+    rpc Login (LoginRequest) returns (LoginResponse) {}
+}
+
+message RegisterRequest{
+    string login = 1;
+    string password = 2;
+    string telegram_login = 3;
+}
+
+message RegisterResponse{
+    string user_id = 1;
+}
+
+message LoginRequest {
+    string login = 1;
+    string password = 2;
+    string telegram_login = 3;
+}
+
+message LoginResponse {
+    string token = 1;
+}
