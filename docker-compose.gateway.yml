@@ -17,7 +17,7 @@ services:
   auth-service:
     build:
       context: .
-      dockerfile: cmd/auth-service/Dockerfile
+      dockerfile: gateway/cmd/auth-service/Dockerfile
     environment:
       - PG_HOST=${PG_HOST}
       - PG_PORT=${PG_PORT}
@@ -32,7 +32,7 @@ services:
   price-monitoring-service:
     build:
       context: .
-      dockerfile: cmd/price-monitoring-service/Dockerfile
+      dockerfile: gateway/cmd/price-monitoring-service/Dockerfile
     environment:
       - PG_HOST=${PG_HOST}
       - PG_PORT=${PG_PORT}
@@ -46,7 +46,7 @@ services:
   api-gateway:
     build:
       context: .
-      dockerfile: cmd/api-gateway/Dockerfile
+      dockerfile: gateway/cmd/api-gateway/Dockerfile
     environment:
       - AUTH_SERVICE_ADDR=${AUTH_SERVICE_ADDR}
       - PRICE_SERVICE_ADDR=${PRICE_SERVICE_ADDR}
@@ -59,7 +59,7 @@ services:
   telegram-bot:
     build:
       context: .
-      dockerfile: cmd/telegram-bot/Dockerfile
+      dockerfile: gateway/cmd/telegram-bot/Dockerfile
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - GATEWAY_URL=${GATEWAY_URL}
