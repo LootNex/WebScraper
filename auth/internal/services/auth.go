@@ -18,6 +18,8 @@ type Auth struct {
 	log          *slog.Logger
 	userChanger  UserChanger
 	userProvider UserProvider
+	tokenChanger TokenChanger
+	tokenChecker TokenChecker
 	TokenTTL     time.Duration
 }
 
@@ -29,17 +31,31 @@ type UserProvider interface {
 	UserLoginsByTelegram(ctx context.Context, telegramLogin string) ([]models.User, error)
 }
 
+type TokenChanger interface {
+	SaveJWT(ctx context.Context, JWT, telegramLogin string, ttl time.Duration) error
+	DeleteJWT(ctx context.Context, telegramLogin string) error
+}
+
+type TokenChecker interface {
+	JWT(ctx context.Context, telegramLogin string) (bool, error)
+}
+
 var (
-	ErrUserExists         = errors.New("user already exist")
+	ErrUserExists         = errors.New("user already exists")
 	ErrUserNotFound       = errors.New("user not found")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrTokenNotFound      = errors.New("token not found")
+	ErrTokenExists        = errors.New("token already exists")
 )
 
-func New(log *slog.Logger, userChanger UserChanger, userProvider UserProvider, tokenTTL time.Duration) *Auth {
+func New(log *slog.Logger, userChanger UserChanger, userProvider UserProvider, tokenChanger TokenChanger,
+	tokenChecker TokenChecker, tokenTTL time.Duration) *Auth {
 	return &Auth{
 		log:          log,
 		userChanger:  userChanger,
 		userProvider: userProvider,
+		tokenChanger: tokenChanger,
+		tokenChecker: tokenChecker,
 		TokenTTL:     tokenTTL,
 	}
 }
@@ -139,5 +155,67 @@ func (a *Auth) Login(ctx context.Context, telegramLogin, login, password string)
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
+	if err := a.tokenChanger.SaveJWT(ctx, token, telegramLogin, a.TokenTTL); err != nil {
+		if errors.Is(err, storage.ErrTokenExists) {
+			log.Warn("user already logged in", slog.String("error", err.Error()))
+
+			return "", fmt.Errorf("%s: %w", op, ErrTokenExists)
+		}
+		log.Error("failed to log user in", slog.String("error", err.Error()))
+
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("successfully logged the user in")
+
 	return token, nil
+}
+
+func (a *Auth) IsLogged(ctx context.Context, telegramLogin string) (bool, error) {
+	const op = "auth.IsLogged"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.String("telegram login", telegramLogin),
+	)
+
+	log.Info("checking if this user is logged in")
+
+	isLogged, err := a.tokenChecker.JWT(ctx, telegramLogin)
+	if err != nil {
+		if errors.Is(err, storage.ErrTokenNotFound) {
+			log.Warn("token not found", slog.String("error", err.Error()))
+
+			return isLogged, fmt.Errorf("%s: %w", op, ErrTokenNotFound)
+		}
+		log.Error("failed to get token", slog.String("error", err.Error()))
+
+		return isLogged, fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("successfully got the info about the user status")
+
+	return isLogged, nil
+}
+
+func (a *Auth) Logout(ctx context.Context, telegramLogin string) error {
+	const op = "auth.Logout"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.String("telegram login", telegramLogin),
+	)
+
+	log.Info("loggin the user out")
+
+	err := a.tokenChanger.DeleteJWT(ctx, telegramLogin)
+	if err != nil {
+		log.Error("failed to log the user out", slog.String("error", err.Error()))
+
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("successfully logged the user out")
+
+	return nil
 }

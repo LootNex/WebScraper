@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -21,6 +22,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	Auth_V1_Register_FullMethodName = "/auth.Auth_V1/Register"
 	Auth_V1_Login_FullMethodName    = "/auth.Auth_V1/Login"
+	Auth_V1_IsLogged_FullMethodName = "/auth.Auth_V1/IsLogged"
+	Auth_V1_Logout_FullMethodName   = "/auth.Auth_V1/Logout"
 )
 
 // Auth_V1Client is the client API for Auth_V1 service.
@@ -29,6 +32,8 @@ const (
 type Auth_V1Client interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	IsLogged(ctx context.Context, in *IsLoggedRequest, opts ...grpc.CallOption) (*IsLoggedResponse, error)
+	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type auth_V1Client struct {
@@ -59,12 +64,34 @@ func (c *auth_V1Client) Login(ctx context.Context, in *LoginRequest, opts ...grp
 	return out, nil
 }
 
+func (c *auth_V1Client) IsLogged(ctx context.Context, in *IsLoggedRequest, opts ...grpc.CallOption) (*IsLoggedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IsLoggedResponse)
+	err := c.cc.Invoke(ctx, Auth_V1_IsLogged_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *auth_V1Client) Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Auth_V1_Logout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Auth_V1Server is the server API for Auth_V1 service.
 // All implementations must embed UnimplementedAuth_V1Server
 // for forward compatibility.
 type Auth_V1Server interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	IsLogged(context.Context, *IsLoggedRequest) (*IsLoggedResponse, error)
+	Logout(context.Context, *LogoutRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAuth_V1Server()
 }
 
@@ -80,6 +107,12 @@ func (UnimplementedAuth_V1Server) Register(context.Context, *RegisterRequest) (*
 }
 func (UnimplementedAuth_V1Server) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
+}
+func (UnimplementedAuth_V1Server) IsLogged(context.Context, *IsLoggedRequest) (*IsLoggedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IsLogged not implemented")
+}
+func (UnimplementedAuth_V1Server) Logout(context.Context, *LogoutRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
 func (UnimplementedAuth_V1Server) mustEmbedUnimplementedAuth_V1Server() {}
 func (UnimplementedAuth_V1Server) testEmbeddedByValue()                 {}
@@ -138,6 +171,42 @@ func _Auth_V1_Login_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_V1_IsLogged_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IsLoggedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(Auth_V1Server).IsLogged(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_V1_IsLogged_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(Auth_V1Server).IsLogged(ctx, req.(*IsLoggedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_V1_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(Auth_V1Server).Logout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_V1_Logout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(Auth_V1Server).Logout(ctx, req.(*LogoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Auth_V1_ServiceDesc is the grpc.ServiceDesc for Auth_V1 service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +221,14 @@ var Auth_V1_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Login",
 			Handler:    _Auth_V1_Login_Handler,
+		},
+		{
+			MethodName: "IsLogged",
+			Handler:    _Auth_V1_IsLogged_Handler,
+		},
+		{
+			MethodName: "Logout",
+			Handler:    _Auth_V1_Logout_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
