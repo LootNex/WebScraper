@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package price_monitoring;
+
+option go_package = "github.com/gulovv/price-tracker/proto";
+
+service PriceMonitoringService {
+    rpc AddItem (AddItemRequest) returns (AddItemResponse);
+    rpc CheckItem (CheckItemRequest) returns (CheckItemResponse);
+    rpc GetAllItems (GetAllItemsRequest) returns (GetAllItemsResponse);
+    rpc GetPriceHistory (PriceHistoryRequest) returns (PriceHistoryResponse);
+    rpc CheckAll (CheckAllRequest) returns (CheckAllResponse);
+}
+
+message AddItemRequest {
+    int64 user_id = 1;
+    string link = 2;
+}
+
+message AddItemResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message CheckItemRequest {
+    int64 user_id = 1;
+    string link = 2;
+}
+
+message CheckItemResponse {
+    bool success = 1;
+    string link = 2;
+    double current_price = 3;
+    string last_checked = 4;
+    string message = 5;
+}
+
+message GetAllItemsRequest {
+    int64 user_id = 1;
+}
+
+message Item {
+    string link = 1;
+    double current_price = 2;
+    string last_checked = 3;  // Добавлено это поле
+}
+
+message GetAllItemsResponse {
+    bool success = 1;
+    repeated Item items = 2;
+    string message = 3;
+}
+
+message PriceHistoryRequest {
+    int64 user_id = 1;
+    string link = 2;
+}
+
+message PriceEntry {
+    double price = 1;
+    string checked_at = 2;
+}
+
+message PriceHistoryResponse {
+    bool success = 1;
+    repeated PriceEntry history = 2;
+    string message = 3;
+}
+
+message CheckAllRequest {}
+
+message CheckAllResponse {
+    bool success = 1;
+    string message = 2;
+}
