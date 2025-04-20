@@ -10,11 +10,14 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type Auth interface {
 	Register(ctx context.Context, telegramLogin, login, password string) (string, error)
 	Login(ctx context.Context, telegramLogin, login, password string) (string, error)
+	IsLogged(ctx context.Context, telegramLogin string) (bool, error)
+	Logout(ctx context.Context, telegramLogin string) error
 }
 
 type ServerAPI struct {
@@ -27,6 +30,8 @@ var (
 	ErrUserNotFound       = "user not found"
 	ErrInternal           = "internal error"
 	ErrInvalidCredentials = "invalid credentials"
+	ErrTokenNotFound      = "token not found"
+	ErrTokenExists        = "token already exists"
 )
 
 func Register(grpc *grpc.Server, auth Auth) {
@@ -63,6 +68,33 @@ func (s *ServerAPI) Login(ctx context.Context, req *authpb.LoginRequest) (*authp
 	}, nil
 }
 
+func (s *ServerAPI) IsLogged(ctx context.Context, req *authpb.IsLoggedRequest) (*authpb.IsLoggedResponse, error) {
+	if err := validateIsLogged(req); err != nil {
+		return nil, err
+	}
+
+	isLogged, err := s.auth.IsLogged(ctx, req.GetTelegramLogin())
+	if err != nil {
+		return nil, formatError(err)
+	}
+
+	return &authpb.IsLoggedResponse{
+		IsLogged: isLogged,
+	}, nil
+}
+
+func (s *ServerAPI) Logout(ctx context.Context, req *authpb.LogoutRequest) (*emptypb.Empty, error) {
+	if err := validateLogout(req); err != nil {
+		return nil, err
+	}
+
+	if err := s.auth.Logout(ctx, req.GetTelegramLogin()); err != nil {
+		return nil, formatError(err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
 func validateRegister(req *authpb.RegisterRequest) error {
 	if req.GetLogin() == "" {
 		return status.Error(codes.InvalidArgument, "login is required")
@@ -89,6 +121,22 @@ func validateLogin(req *authpb.LoginRequest) error {
 	return nil
 }
 
+func validateIsLogged(req *authpb.IsLoggedRequest) error {
+	if req.GetTelegramLogin() == "" {
+		return status.Error(codes.InvalidArgument, "telegram login is required")
+	}
+
+	return nil
+}
+
+func validateLogout(req *authpb.LogoutRequest) error {
+	if req.GetTelegramLogin() == "" {
+		return status.Error(codes.InvalidArgument, "telegram login is required")
+	}
+
+	return nil
+}
+
 func formatError(err error) error {
 	if errors.Is(err, auth.ErrUserExists) {
 		return status.Error(codes.AlreadyExists, ErrUserExists)
@@ -96,6 +144,10 @@ func formatError(err error) error {
 		return status.Error(codes.NotFound, ErrUserNotFound)
 	} else if errors.Is(err, auth.ErrInvalidCredentials) {
 		return status.Error(codes.PermissionDenied, ErrInvalidCredentials)
+	} else if errors.Is(err, auth.ErrTokenNotFound) {
+		return status.Error(codes.NotFound, ErrTokenNotFound)
+	} else if errors.Is(err, auth.ErrTokenExists) {
+		return status.Error(codes.AlreadyExists, ErrTokenExists)
 	}
 
 	return status.Error(codes.Internal, ErrInternal)

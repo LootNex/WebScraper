@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Storage  StorageConfig `yml:"storage" env-required:"true"`
-	TokenTTL time.Duration `yml:"tokenttl" env-required:"true"`
-	GRPC     GRPCConfig    `yml:"grpc" env-required:"true"`
+	Storage       StorageConfig       `yml:"storage" env-required:"true"`
+	TokenTTL      time.Duration       `yml:"tokenttl" env-required:"true"`
+	GRPC          GRPCConfig          `yml:"grpc" env-required:"true"`
+	TokensStorage TokensStorageConfig `yml:"tokensstorage" env-required:"true"`
 }
 
 type StorageConfig struct {
@@ -28,6 +29,11 @@ type StorageConfig struct {
 type GRPCConfig struct {
 	Port    int
 	Timeout time.Duration
+}
+
+type TokensStorageConfig struct {
+	Addr     string `yml:"addr"`
+	Password string `yml:"password"`
 }
 
 func MustLoad() *Config {

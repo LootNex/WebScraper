@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
 package auth;
 
 option go_package = "pkg/pb/auth;auth";
@@ -7,6 +8,8 @@ option go_package = "pkg/pb/auth;auth";
 service Auth_V1{
     rpc Register (RegisterRequest) returns (RegisterResponse) {}
     rpc Login (LoginRequest) returns (LoginResponse) {}
+    rpc IsLogged(IsLoggedRequest) returns (IsLoggedResponse) {}
+    rpc Logout (LogoutRequest) returns (google.protobuf.Empty) {}
 }
 
 message RegisterRequest{
@@ -27,4 +30,16 @@ message LoginRequest {
 
 message LoginResponse {
     string token = 1;
+}
+
+message IsLoggedRequest {
+    string telegram_login = 1;
+}
+
+message IsLoggedResponse {
+    bool is_logged = 1;
+}
+
+message LogoutRequest {
+    string telegram_login = 1;
 }

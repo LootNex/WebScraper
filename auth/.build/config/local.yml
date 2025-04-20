@@ -7,6 +7,9 @@ storage:
   sslmode: "disable"
   servicename: "auth"
   migrationspath: "file://app/migrations"
+tokensstorage:
+  addr: "redis:6379"
+  password: "redispass"
 tokenttl: 720h
 grpc:
   port: 44045

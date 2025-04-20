@@ -25,7 +25,10 @@ func main() {
 		SSLMode:  cfg.Storage.SSLmode,
 		User:     cfg.Storage.User,
 		DBname:   cfg.Storage.DBname,
-	}, cfg.TokenTTL)
+	}, app.TokensStorage{
+		Addr:cfg.TokensStorage.Addr,
+		Password: cfg.TokensStorage.Password,
+	} ,cfg.TokenTTL)
 
 	migrator.Migrate(migrator.MigrationsConnectionInfo{
 		Host:           cfg.Storage.Host,

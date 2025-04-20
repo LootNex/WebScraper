@@ -13,8 +13,8 @@ services:
     networks:
       - price_tracker_network
     depends_on:
-      db_init_schemas:
-        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "grpc_health_probe -addr=:44045"]
       interval: 1m30s
@@ -51,9 +51,30 @@ services:
         condition: service_healthy
     networks:
       - price_tracker_network
-
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    volumes:
+      - redis_volume_data:/data
+    ports:
+      - 6379:6379
+    environment:
+      REDIS_PASSWORD: redispass
+    command: ["redis-server", "--requirepass", "redispass"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "redis-cli -a redispass ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - price_tracker_network
+    depends_on:
+      db_init_schemas:
+        condition: service_completed_successfully
 volumes:
   pgdata:
+  redis_volume_data:
 
 networks:
   price_tracker_network:
