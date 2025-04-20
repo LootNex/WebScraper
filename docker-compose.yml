@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  auth:
+    container_name: auth
+    build: 
+      dockerfile: auth/.build/build/Dockerfile
+      context: .
+    env_file:
+      - auth/.env
+    ports:
+      - "44045:44045"
+    networks:
+      - price_tracker_network
+    depends_on:
+      db_init_schemas:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "grpc_health_probe -addr=:44045"]
+      interval: 1m30s
+      timeout: 20s
+      retries: 3
+      start_period: 15s
+  database:
+    container_name: postgres
+    image: postgres:latest
+    environment:
+      - "POSTGRES_PASSWORD=passprice"
+      - "POSTGRES_DB=tracker"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - price_tracker_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tracker"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 5s
+  db_init_schemas:
+    container_name: init_schemas
+    build:
+      context: .
+      dockerfile: database/postgres/init_schemas/Dockerfile
+    env_file:
+      - database/postgres/.env
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - price_tracker_network
+
+volumes:
+  pgdata:
+
+networks:
+  price_tracker_network:
+    driver: bridge

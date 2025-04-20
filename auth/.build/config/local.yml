@@ -1,0 +1,13 @@
+storage:
+  host: "postgres"
+  port: 5432
+  password: "passprice"
+  user: "postgres"
+  dbname: "tracker"
+  sslmode: "disable"
+  servicename: "auth"
+  migrationspath: "file://app/migrations"
+tokenttl: 720h
+grpc:
+  port: 44045
+  timeout: 5s
