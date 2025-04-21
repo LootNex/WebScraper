@@ -12,6 +12,8 @@ import (
 
 func InitDriver() (selenium.WebDriver, func(), error) {
 
+	// driverPath := "./internal/driver/chromedriver/chromedriver.exe"
+
 	driverPath, err := exec.LookPath("chromedriver")
 	if err != nil {
 		return nil, nil, err

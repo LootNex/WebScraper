@@ -17,23 +17,23 @@ func OzonParser(link string, driver selenium.WebDriver) (string, string, string,
 	text, err := driver.PageSource()
 	fmt.Println(text, err)
 	err = driver.Wait(func(wd selenium.WebDriver) (bool, error) {
-		_, err := wd.FindElement(selenium.ByCSSSelector, "h1.om4_28.tsHeadline550Medium")
+		_, err := wd.FindElement(selenium.ByCSSSelector, "h1.mo5_28.tsHeadline550Medium")
 		return err == nil, nil
 	})
 	if err != nil {
 		return "", "", "", err
 	}
-	wallet_price, err := driver.FindElement(selenium.ByCSSSelector, "span.n3m_28.mn2_28")
+	wallet_price, err := driver.FindElement(selenium.ByCSSSelector, "span.m4n_28.nm2_28")
 	if err != nil {
 		return "", "", "", err
 	}
 
-	price, err := driver.FindElement(selenium.ByCSSSelector, "span.nm8_28.n8m_28.mo2_28")
+	price, err := driver.FindElement(selenium.ByCSSSelector, "span.mn9_28.m9n_28.om2_28")
 	if err != nil {
 		return "", "", "", err
 	}
 
-	product_title, err := driver.FindElement(selenium.ByCSSSelector, "h1.om4_28.tsHeadline550Medium")
+	product_title, err := driver.FindElement(selenium.ByCSSSelector, "h1.mo5_28.tsHeadline550Medium")
 	if err != nil {
 		return "", "", "", err
 	}

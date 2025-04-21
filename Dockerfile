@@ -48,7 +48,7 @@
 
 # CMD ["./price_tracker"]
 
-FROM golang:1.24-bullseye AS builder
+FROM golang:1.24-bookworm AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -56,7 +56,7 @@ RUN go mod download
 COPY . .
 RUN go build -o price_tracker ./cmd
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \
   wget \
