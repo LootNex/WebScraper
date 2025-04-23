@@ -20,6 +20,7 @@ WORKDIR /root/
 
 # Копируем бинарный файл из этапа сборки
 COPY --from=builder /app/telegram-bot .
+COPY /gateway/.env /root/
 
 # Устанавливаем зависимости (если нужны)
 RUN apk --no-cache add ca-certificates

@@ -21,6 +21,7 @@ WORKDIR /root/
 # Копируем бинарный файл из этапа сборки
 COPY --from=builder /app/price-monitoring-service .
 COPY --from=builder /app/internal/scrapping ./internal/scrapping
+COPY /gateway/.env /root/
 
 # Копируем файлы шаблонов и статики, если они есть
 # COPY --from=builder /app/templates ./templates

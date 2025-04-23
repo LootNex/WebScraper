@@ -5,18 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	authclient "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/internal/clients/auth/grpc"
 	"gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/proto"
 	"google.golang.org/grpc"
 )
 
 type GatewayServer struct {
-	authClient  proto.AuthServiceClient
+	authClient  authclient.Client
 	priceClient proto.PriceMonitoringServiceClient
 }
 
@@ -40,8 +43,14 @@ func main() {
 	}
 	defer priceConn.Close()
 
+	var logger = slog.New(
+		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+	)
+
+	authClient, err := authclient.New(context.TODO(), logger, "auth:44045", time.Second*5, 5)
+
 	server := &GatewayServer{
-		authClient:  proto.NewAuthServiceClient(authConn),
+		authClient:  *authClient,
 		priceClient: proto.NewPriceMonitoringServiceClient(priceConn),
 	}
 
@@ -61,10 +70,7 @@ func (s *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := s.authClient.AuthenticateUser(context.Background(), &proto.AuthRequest{
-		Login:    r.FormValue("login"),
-		Password: r.FormValue("password"),
-	})
+	resp, err := s.authClient.Login(context.Background(), r.FormValue("login"), r.FormValue("password"), r.FormValue("telegram_password"))
 	if err != nil {
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
