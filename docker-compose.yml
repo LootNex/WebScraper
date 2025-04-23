@@ -1,44 +1,22 @@
-version: '3.9'
-
 services:
-  auth:
-    container_name: auth
-    build: 
-      dockerfile: auth/.build/build/Dockerfile
-      context: .
-    env_file:
-      - auth/.env
-    ports:
-      - "44045:44045"
-    networks:
-      - price_tracker_network
-    depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "grpc_health_probe -addr=:44045"]
-      interval: 1m30s
-      timeout: 20s
-      retries: 3
-      start_period: 15s
-  database:
+  postgres:
     container_name: postgres
-    image: postgres:latest
+    image: postgres:15-alpine
     environment:
-      - "POSTGRES_PASSWORD=passprice"
-      - "POSTGRES_DB=tracker"
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DBNAME}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - price_tracker_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d tracker"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-      start_period: 5s
+
   db_init_schemas:
     container_name: init_schemas
     build:
@@ -47,10 +25,11 @@ services:
     env_file:
       - database/postgres/.env
     depends_on:
-      database:
+      postgres:
         condition: service_healthy
     networks:
       - price_tracker_network
+
   redis:
     image: redis:latest
     container_name: redis
@@ -58,20 +37,47 @@ services:
     volumes:
       - redis_volume_data:/data
     ports:
-      - 6379:6379
+      - "6379:6379"
     environment:
-      REDIS_PASSWORD: redispass
-    command: ["redis-server", "--requirepass", "redispass"]
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     healthcheck:
-      test: ["CMD", "sh", "-c", "redis-cli -a redispass ping | grep PONG"]
+      test: ["CMD", "sh", "-c", "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"]
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - price_tracker_network
     depends_on:
       db_init_schemas:
         condition: service_completed_successfully
+    networks:
+      - price_tracker_network
+
+  api-gateway:
+    container_name: api-gateway
+    build:
+      context: .
+      dockerfile: gateway/cmd/api-gateway/Dockerfile
+    environment:
+      - AUTH_SERVICE_ADDR=${AUTH_SERVICE_ADDR}
+      - PRICE_SERVICE_ADDR=${PRICE_SERVICE_ADDR}
+    ports:
+      - "8080:8080"
+    networks:
+      - price_tracker_network
+
+  telegram-bot:
+    container_name: telegram-bot
+    build:
+      context: .
+      dockerfile: gateway/cmd/telegram-bot/Dockerfile
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - GATEWAY_URL=${GATEWAY_URL}
+    depends_on:
+      - api-gateway
+    networks:
+      - price_tracker_network
+
 volumes:
   pgdata:
   redis_volume_data:

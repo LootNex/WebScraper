@@ -9,6 +9,7 @@ import (
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	authpb "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/pkg/pb/auth"
+	"gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -17,6 +18,10 @@ import (
 type Client struct {
 	api authpb.Auth_V1Client
 	log *slog.Logger
+}
+
+func (c Client) ValidateToken(context context.Context, request *proto.ValidateTokenRequest) (any, any) {
+	panic("unimplemented")
 }
 
 func New(ctx context.Context, log *slog.Logger, addr string, timeout time.Duration, retriesCount int) (*Client, error) {
