@@ -9,8 +9,7 @@ COPY gateway/ .
 RUN go build -o /api-gateway ./cmd/api-gateway
 
 FROM alpine:latest
-WORKDIR /root/
-COPY --from=builder /api-gateway .
-COPY /gateway/.env /root/
+WORKDIR .
+COPY --from=builder /api-gateway /app/
 EXPOSE 8080
-CMD ["./api-gateway"]
+CMD ["./app/api-gateway"]

@@ -3,27 +3,19 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# Копируем файлы зависимостей
 COPY gateway/go.mod gateway/go.sum ./
 RUN go mod download
 
-# Копируем исходный код
 COPY gateway/ .
 
-# Собираем приложение
-RUN CGO_ENABLED=0 GOOS=linux go build -o telegram-bot ./cmd/telegram-bot
+RUN go build -o /telegram-bot ./cmd/telegram-bot
 
-# Этап запуска
 FROM alpine:latest
 
-WORKDIR /root/
+WORKDIR .
 
-# Копируем бинарный файл из этапа сборки
-COPY --from=builder /app/telegram-bot .
-COPY /gateway/.env /root/
+COPY --from=builder /telegram-bot /app/
 
-# Устанавливаем зависимости (если нужны)
 RUN apk --no-cache add ca-certificates
 
-# Команда для запуска бота
-CMD ["./telegram-bot"]
+CMD ["./app/telegram-bot"]

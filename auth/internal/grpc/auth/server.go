@@ -16,7 +16,7 @@ import (
 type Auth interface {
 	Register(ctx context.Context, telegramLogin, login, password string) (string, error)
 	Login(ctx context.Context, telegramLogin, login, password string) (string, error)
-	IsLogged(ctx context.Context, telegramLogin string) (bool, error)
+	IsLogged(ctx context.Context, telegramLogin string) (string, error)
 	Logout(ctx context.Context, telegramLogin string) error
 }
 
@@ -72,14 +72,13 @@ func (s *ServerAPI) IsLogged(ctx context.Context, req *authpb.IsLoggedRequest) (
 	if err := validateIsLogged(req); err != nil {
 		return nil, err
 	}
-
-	isLogged, err := s.auth.IsLogged(ctx, req.GetTelegramLogin())
+	token, err := s.auth.IsLogged(ctx, req.GetTelegramLogin())
 	if err != nil {
 		return nil, formatError(err)
 	}
 
 	return &authpb.IsLoggedResponse{
-		IsLogged: isLogged,
+		Token: token,
 	}, nil
 }
 

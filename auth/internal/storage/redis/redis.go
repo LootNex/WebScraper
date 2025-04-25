@@ -27,20 +27,20 @@ func (db *TokenStorage) Close() {
 	db.db.Close()
 }
 
-func (db *TokenStorage) JWT(ctx context.Context, telegramLogin string) (bool, error) {
+func (db *TokenStorage) JWT(ctx context.Context, telegramLogin string) (string, error) {
 	const op = "storage.redis.JWT"
 
 	key := fmt.Sprintf("telegram_login:%s", telegramLogin)
 
-	_, err := db.db.Get(ctx, key).Result()
+	token, err := db.db.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
-			return false, fmt.Errorf("%s: %w", op, storage.ErrTokenNotFound)
+			return "", fmt.Errorf("%s: %w", op, storage.ErrTokenNotFound)
 		}
-		return false, fmt.Errorf("%s: failed to get JWT for user %s: %w", op, telegramLogin, err)
+		return "", fmt.Errorf("%s: failed to get JWT for user %s: %w", op, telegramLogin, err)
 	}
 
-	return true, nil
+	return token, nil
 }
 
 func (db *TokenStorage) SaveJWT(ctx context.Context, token string, telegramLogin string, ttl time.Duration) error {

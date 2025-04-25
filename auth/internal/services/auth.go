@@ -37,7 +37,7 @@ type TokenChanger interface {
 }
 
 type TokenChecker interface {
-	JWT(ctx context.Context, telegramLogin string) (bool, error)
+	JWT(ctx context.Context, telegramLogin string) (string, error)
 }
 
 var (
@@ -171,7 +171,7 @@ func (a *Auth) Login(ctx context.Context, telegramLogin, login, password string)
 	return token, nil
 }
 
-func (a *Auth) IsLogged(ctx context.Context, telegramLogin string) (bool, error) {
+func (a *Auth) IsLogged(ctx context.Context, telegramLogin string) (string, error) {
 	const op = "auth.IsLogged"
 
 	log := a.log.With(
@@ -181,21 +181,21 @@ func (a *Auth) IsLogged(ctx context.Context, telegramLogin string) (bool, error)
 
 	log.Info("checking if this user is logged in")
 
-	isLogged, err := a.tokenChecker.JWT(ctx, telegramLogin)
+	token, err := a.tokenChecker.JWT(ctx, telegramLogin)
 	if err != nil {
 		if errors.Is(err, storage.ErrTokenNotFound) {
 			log.Warn("token not found", slog.String("error", err.Error()))
 
-			return isLogged, fmt.Errorf("%s: %w", op, ErrTokenNotFound)
+			return "", fmt.Errorf("%s: %w", op, ErrTokenNotFound)
 		}
 		log.Error("failed to get token", slog.String("error", err.Error()))
 
-		return isLogged, fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	log.Info("successfully got the info about the user status")
 
-	return isLogged, nil
+	return token, nil
 }
 
 func (a *Auth) Logout(ctx context.Context, telegramLogin string) error {

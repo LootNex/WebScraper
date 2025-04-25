@@ -9,7 +9,6 @@ import (
 	grpclog "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	authpb "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/pkg/pb/auth"
-	"gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -20,12 +19,9 @@ type Client struct {
 	log *slog.Logger
 }
 
-func (c Client) ValidateToken(context context.Context, request *proto.ValidateTokenRequest) (any, any) {
-	panic("unimplemented")
-}
 
-func New(ctx context.Context, log *slog.Logger, addr string, timeout time.Duration, retriesCount int) (*Client, error) {
-	const op = "grpc.New"
+func New(log *slog.Logger, addr string, timeout time.Duration, retriesCount int) (*Client, error) {
+	const op = "grpc.auth.New"
 
 	retryOpts := []grpcretry.CallOption{
 		grpcretry.WithCodes(codes.NotFound, codes.Aborted, codes.DeadlineExceeded),
@@ -37,7 +33,7 @@ func New(ctx context.Context, log *slog.Logger, addr string, timeout time.Durati
 		grpclog.WithLogOnEvents(grpclog.PayloadReceived, grpclog.PayloadSent),
 	}
 
-	cc, err := grpc.DialContext(ctx, addr,
+	cc, err := grpc.NewClient(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithChainUnaryInterceptor(
 			grpclog.UnaryClientInterceptor(InterceptorLogger(log), logOpts...),
@@ -63,7 +59,7 @@ func InterceptorLogger(l *slog.Logger) grpclog.Logger {
 }
 
 func (c *Client) Register(ctx context.Context, telegramLogin, login, password string) (string, error) {
-	const op = "grpc.Register"
+	const op = "grpc.auth.Register"
 
 	resp, err := c.api.Register(ctx, &authpb.RegisterRequest{
 		TelegramLogin: telegramLogin,
@@ -79,7 +75,7 @@ func (c *Client) Register(ctx context.Context, telegramLogin, login, password st
 }
 
 func (c *Client) Login(ctx context.Context, telegramLogin, login, password string) (string, error) {
-	const op = "grpc.Login"
+	const op = "grpc.auth.Login"
 
 	resp, err := c.api.Login(ctx, &authpb.LoginRequest{
 		TelegramLogin: telegramLogin,
@@ -94,22 +90,22 @@ func (c *Client) Login(ctx context.Context, telegramLogin, login, password strin
 	return resp.GetToken(), nil
 }
 
-func (c *Client) IsLogged(ctx context.Context, telegramLogin string) (bool, error) {
-	const op = "grpc.IsLogged"
+func (c *Client) IsLogged(ctx context.Context, telegramLogin string) (string, error) {
+	const op = "grpc.auth.IsLogged"
 
 	resp, err := c.api.IsLogged(ctx, &authpb.IsLoggedRequest{
 		TelegramLogin: telegramLogin,
 	})
 
 	if err != nil {
-		return resp.GetIsLogged(), fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	return resp.GetIsLogged(), nil
+	return resp.GetToken(), nil
 }
 
 func (c *Client) Logout(ctx context.Context, telegramLogin string) error {
-	const op = "grpc.Login"
+	const op = "grpc.auth.Login"
 
 	_, err := c.api.Logout(ctx, &authpb.LogoutRequest{
 		TelegramLogin: telegramLogin,

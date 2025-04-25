@@ -37,7 +37,7 @@ message IsLoggedRequest {
 }
 
 message IsLoggedResponse {
-    bool is_logged = 1;
+    string token = 1;
 }
 
 message LogoutRequest {

@@ -1,170 +1,211 @@
-
 package main
 
 import (
-    "context"
-    "encoding/json"
-    "fmt"
-    "log"
-    "net/http"
-    "os"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"log/slog"
+	"net/http"
+	"os"
+	"time"
 
-    pbAuth "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/pkg/pb/auth"
+	authclient "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/internal/clients/auth/grpc"
+	trackerclient "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/internal/clients/tracker/grpc"
+	"gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/gateway/internal/lib/jwt"
 
-    "github.com/gorilla/mux"
-    "github.com/joho/godotenv"
-    "google.golang.org/grpc"
+	"github.com/gorilla/mux"
 )
 
 type GatewayServer struct {
-    authClient pbAuth.Auth_V1Client
+	authClient    authclient.Client
+	trackerClient trackerclient.Client
 }
 
 func main() {
-    if err := godotenv.Load(); err != nil {
-        log.Println("No .env file found")
-    }
+	authAddr := os.Getenv("AUTH_SERVICE_ADDR")
+	trackerAddr := os.Getenv("PRICE_SERVICE_ADDR")
 
-    authAddr := os.Getenv("AUTH_SERVICE_ADDR")
+	var logger = slog.New(
+		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+	)
 
-    authConn, err := grpc.Dial(authAddr, grpc.WithInsecure())
-    if err != nil {
-        log.Fatal("Failed to connect to auth service:", err)
-    }
-    defer authConn.Close()
+	authClient, err := authclient.New(logger, authAddr, time.Second*5, 1)
+	if err != nil {
+		panic("failed to connect to auth server")
+	}
 
-    server := &GatewayServer{
-        authClient: pbAuth.NewAuth_V1Client(authConn), 
-    }
-    r := mux.NewRouter()
-    r.HandleFunc("/login", server.handleLogin).Methods("POST")
+	trackerClient, err := trackerclient.New(logger, trackerAddr, time.Second*5, 1)
+	if err != nil {
+		panic("failed to connect to tracker server")
+	}
 
-    log.Println("API Gateway running on :8080")
-    log.Fatal(http.ListenAndServe(":8080", r))
+	server := &GatewayServer{
+		authClient:    *authClient,
+		trackerClient: *trackerClient,
+	}
+
+	r := mux.NewRouter()
+	r.HandleFunc("/login", server.handleLogin).Methods("POST")
+	r.HandleFunc("/register", server.handleRegister).Methods("POST")
+	r.HandleFunc("/logout", server.handleLogout).Methods("POST")
+	r.HandleFunc("/check_item", server.handleGetItem).Methods("POST")
+    r.HandleFunc("/get_all_items", server.handleGetAllItems).Methods("GET")
+
+	log.Println("API Gateway running on :8080")
+	log.Fatal(http.ListenAndServe(":8080", r))
+}
+
+func (s *GatewayServer) handleRegister(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Login         string `json:"login"`
+		Password      string `json:"password"`
+		TelegramLogin string `json:"telegram_login"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	_, err := s.authClient.IsLogged(context.Background(), req.TelegramLogin)
+	if err == nil {
+		http.Error(w, fmt.Sprintf("registration failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := s.authClient.Register(context.Background(), req.TelegramLogin, req.Login, req.Password)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("registraton failed: %v", err), http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"user_id": resp,
+	})
 }
 
 func (s *GatewayServer) handleLogin(w http.ResponseWriter, r *http.Request) {
-    var req struct {
-        Login    string `json:"login"`   
-        Password string `json:"password"`
-    }
+	var req struct {
+		Login         string `json:"login"`
+		Password      string `json:"password"`
+		TelegramLogin string `json:"telegram_login"`
+	}
 
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "invalid request body", http.StatusBadRequest)
-        return
-    }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
 
-    loginResp, err := s.authClient.Login(context.Background(), &pbAuth.LoginRequest{
-        Login:    req.Login,    
-        Password: req.Password, 
-    })
-    if err != nil {
-        http.Error(w, fmt.Sprintf("login failed: %v", err), http.StatusUnauthorized)
-        return
-    }
+	_, err := s.authClient.IsLogged(context.Background(), req.TelegramLogin)
+	if err == nil {
+		http.Error(w, fmt.Sprintf("login failed: %v", err), http.StatusInternalServerError)
+		return
+	}
 
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]string{
-        "token": loginResp.Token,
-    })
+	resp, err := s.authClient.Login(context.Background(), req.TelegramLogin, req.Login, req.Password)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("login failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"token": resp,
+	})
 }
 
+func (s *GatewayServer) handleLogout(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		TelegramLogin string `json:"telegram_login"`
+	}
 
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
 
+	_, err := s.authClient.IsLogged(context.Background(), req.TelegramLogin)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("logout failed: %v", err), http.StatusInternalServerError)
+		return
+	}
 
+	err = s.authClient.Logout(context.Background(), req.TelegramLogin)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("logout failed: %v", err), http.StatusInternalServerError)
+		return
+	}
 
+	w.Header().Set("Content-Type", "application/json")
+}
 
+func (s *GatewayServer) handleGetItem(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		TelegramLogin string `json:"telegram_login"`
+		Link          string `json:"link"`
+	}
 
-// func (s *GatewayServer) handleAddItem(w http.ResponseWriter, r *http.Request) {
-// 	userID, err := s.validateToken(r)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusUnauthorized)
-// 		return
-// 	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
 
-// 	var reqBody struct {
-// 		Link string `json:"link"`
-// 	}
-// 	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-// 		http.Error(w, "Invalid request", http.StatusBadRequest)
-// 		return
-// 	}
-// 	defer r.Body.Close()
+	token, err := s.authClient.IsLogged(context.Background(), req.TelegramLogin)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
-// 	resp, err := s.priceClient.AddItem(context.Background(), &proto.AddItemRequest{
-// 		UserId: userID,
-// 		Link:   reqBody.Link,
-// 	})
-// 	if err != nil {
-// 		http.Error(w, "Internal error", http.StatusInternalServerError)
-// 		return
-// 	}
+	userID, err := jwt.GetUserID(token)
+	if err != nil {
+		http.Error(w, "failed to validate user's token", http.StatusUnauthorized)
+		return
+	}
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-// 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-// 	}
-// }
+	resp, err := s.trackerClient.GetItem(context.Background(), userID, req.Link)
+	if err != nil {
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
 
-// func (s *GatewayServer) handleCheckItem(w http.ResponseWriter, r *http.Request) {
-// 	userID, err := s.validateToken(r)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusUnauthorized)
-// 		return
-// 	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
 
-// 	link := r.URL.Query().Get("link")
-// 	if link == "" {
-// 		http.Error(w, "Link is required", http.StatusBadRequest)
-// 		return
-// 	}
+func (s *GatewayServer) handleGetAllItems(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		TelegramLogin string `json:"telegram_login"`
+	}
 
-// 	resp, err := s.priceClient.CheckItem(context.Background(), &proto.CheckItemRequest{
-// 		UserId: userID,
-// 		Link:   link,
-// 	})
-// 	if err != nil {
-// 		http.Error(w, "Internal error", http.StatusInternalServerError)
-// 		return
-// 	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-// 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-// 	}
-// }
+	token, err := s.authClient.IsLogged(context.Background(), req.TelegramLogin)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
-// func (s *GatewayServer) handleGetAllItems(w http.ResponseWriter, r *http.Request) {
-// 	userID, err := s.validateToken(r)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusUnauthorized)
-// 		return
-// 	}
+	userID, err := jwt.GetUserID(token)
+	if err != nil {
+		http.Error(w, "failed to validate user's token", http.StatusUnauthorized)
+		return
+	}
 
-// 	resp, err := s.priceClient.GetAllItems(context.Background(), &proto.GetAllItemsRequest{
-// 		UserId: userID,
-// 	})
-// 	if err != nil {
-// 		http.Error(w, "Internal error", http.StatusInternalServerError)
-// 		return
-// 	}
+	resp, err := s.trackerClient.GetAllItems(context.Background(), userID)
+	if err != nil {
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-// 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-// 	}
-// }
-
-// func (s *GatewayServer) validateToken(r *http.Request) (int64, error) {
-// 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-// 	if token == "" {
-// 		return 0, fmt.Errorf("missing token")
-// 	}
-
-// 	resp, err := s.authClient.ValidateToken(context.Background(), &proto.ValidateTokenRequest{Token: token})
-// 	if err != nil || !resp.Valid {
-// 		return 0, fmt.Errorf("invalid token")
-// 	}
-
-// 	return resp.UserId, nil
-// }
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
