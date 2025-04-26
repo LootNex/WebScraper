@@ -73,7 +73,7 @@
 
 ---
 
-![Реализрация запросов](./images/schema.png)
+<img src="./images/schema.png" alt="Database Schema" width="800"/>
 
 
 ## Технологии
