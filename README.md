@@ -19,6 +19,16 @@
 
 Маршрутизация осуществляется через Nginx, настроенный в API Gateway. TelegramBot взаимодействует с API Gateway по одному открытому порту.
 
+## Схемы баз данных
+
+Postgres
+
+![Структура Postgres](./images/pg.png)
+
+Redis
+
+![Структура Redis](./images/redis.png)
+
 ---
 
 ## Основные эндпоинты
@@ -82,9 +92,4 @@
 - Docker
 - Nginx
 - PostgreSQL
-
-![Структура Postgres](./images/pg.png)
-
 - Redis
-
-![Структура Redis](./images/redis.png)
