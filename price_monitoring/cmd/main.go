@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-
 	postg_conn, err := postgres_db.InitDB()
 	if err != nil {
 		log.Fatalf("cannot connect to Postgres %v", err)

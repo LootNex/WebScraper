@@ -57,7 +57,7 @@ func main() {
 				handleGetAllItems(update.Message, bot, update.Message.Chat.UserName)
 			default:
 				sendMessage(bot, update.Message.Chat.ID,
-					"Unknown command. Try /login, /register, /check_item, /get_all_items")
+					"Unknown command. Try /login, /register, /logout, /check_item, /get_all_items")
 			}
 		}
 	}
