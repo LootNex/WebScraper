@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tebeka/selenium"
-	proto "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/price_monitoring/gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/price-monitoring"
 	"gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/price_monitoring/internal/parser"
+	proto "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/price_monitoring/proto"
 )
 
 // "https://www.ozon.ru/product/zero-mileage-5w-30-maslo-motornoe-sinteticheskoe-1-l-1627408607/?at=Eqtk44V8ghrNGKRJTOPRG9LS0zoNA7UwDRn5mtNR6r8o"
@@ -30,8 +30,8 @@ func (s *Service) GetItem(ctx context.Context, req *proto.GetItemRequest) (*prot
 
 	if err == sql.ErrNoRows {
 
-		name, price,err := parser.Parser(req.Link)
-		if err != nil{
+		name, price, err := parser.Parser(req.Link)
+		if err != nil {
 			return nil, fmt.Errorf("cannot parse this link: %v", err)
 		}
 
@@ -57,10 +57,10 @@ func (s *Service) GetItem(ctx context.Context, req *proto.GetItemRequest) (*prot
 		return nil, err
 	}
 
-	name, price,err := parser.Parser(req.Link)
-		if err != nil{
-			return nil, fmt.Errorf("cannot parse this link: %v", err)
-		}
+	name, price, err := parser.Parser(req.Link)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse this link: %v", err)
+	}
 
 	_, err = s.Postg.Exec("UPDATE auth.items SET current_price = $1 WHERE link = $2", price, req.Link)
 	if err != nil {
@@ -99,8 +99,8 @@ func (s *Service) GetAllItems(ctx context.Context, req *proto.GetAllItemsRequest
 			return nil, err
 		}
 
-		name, price,err := parser.Parser(link)
-		if err != nil{
+		name, price, err := parser.Parser(link)
+		if err != nil {
 			return nil, fmt.Errorf("cannot parse this link: %v", err)
 		}
 
@@ -123,5 +123,3 @@ func (s *Service) GetAllItems(ctx context.Context, req *proto.GetAllItemsRequest
 	return &proto.GetAllItemsResponse{Items: items}, nil
 
 }
-
-

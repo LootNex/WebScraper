@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package price_tracker;
 
-option go_package = "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/price-monitoring";
+option go_package = "proto";
 
 service Scraper{
     rpc GetItem (GetItemRequest) returns (GetItemResponse);
