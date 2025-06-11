@@ -149,6 +149,7 @@ func (a *Auth) Login(ctx context.Context, telegramLogin, login, password string)
 	log.Info("user logged in successfully")
 
 	token, err := jwt.NewToken(requiredUser, a.TokenTTL)
+	slog.Info(fmt.Sprintf("!!! token: %s", token))
 	if err != nil {
 		log.Error("failed to generate token", slog.String("error", err.Error()))
 

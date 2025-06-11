@@ -10,7 +10,6 @@ import (
 
 func NewToken(user models.User, duration time.Duration) (string, error) {
 	secret := os.Getenv("SECRET")
-
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)

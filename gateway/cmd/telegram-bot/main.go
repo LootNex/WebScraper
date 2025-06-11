@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -234,8 +235,24 @@ func handleCheckItem(message *tgbotapi.Message, bot *tgbotapi.BotAPI, telegramLo
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		sendMessage(bot, message.Chat.ID, "Failed to read server response")
+		return
+	}
+
+	// Печатаем сырой ответ для отладки
+	fmt.Println("Raw response:", string(bodyBytes))
+
+	// Декодируем JSON из прочитанных байтов
 	var respBody map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&respBody)
+	if err := json.Unmarshal(bodyBytes, &respBody); err != nil {
+		sendMessage(bot, message.Chat.ID, "Invalid server response format")
+		return
+	}
+
+	fmt.Println("Parsed response:", respBody)
+
 	if resp.StatusCode != http.StatusOK {
 		sendMessage(bot, message.Chat.ID, "you need to login to use this method")
 		return

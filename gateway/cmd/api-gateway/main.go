@@ -50,7 +50,7 @@ func main() {
 	r.HandleFunc("/register", server.handleRegister).Methods("POST")
 	r.HandleFunc("/logout", server.handleLogout).Methods("POST")
 	r.HandleFunc("/check_item", server.handleGetItem).Methods("POST")
-    r.HandleFunc("/get_all_items", server.handleGetAllItems).Methods("GET")
+	r.HandleFunc("/get_all_items", server.handleGetAllItems).Methods("GET")
 
 	log.Println("API Gateway running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
@@ -160,6 +160,7 @@ func (s *GatewayServer) handleGetItem(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := jwt.GetUserID(token)
 	if err != nil {
+		log.Printf("JWT validation failed: %v", err)
 		http.Error(w, "failed to validate user's token", http.StatusUnauthorized)
 		return
 	}
