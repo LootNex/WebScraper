@@ -241,10 +241,8 @@ func handleCheckItem(message *tgbotapi.Message, bot *tgbotapi.BotAPI, telegramLo
 		return
 	}
 
-	// Печатаем сырой ответ для отладки
 	fmt.Println("Raw response:", string(bodyBytes))
 
-	// Декодируем JSON из прочитанных байтов
 	var respBody map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &respBody); err != nil {
 		sendMessage(bot, message.Chat.ID, "Invalid server response format")
@@ -290,10 +288,23 @@ func handleGetAllItems(message *tgbotapi.Message, bot *tgbotapi.BotAPI, telegram
 		sendMessage(bot, message.Chat.ID, "Failed to connect to server")
 		return
 	}
+
 	defer resp.Body.Close()
 
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		sendMessage(bot, message.Chat.ID, "Failed to read server response")
+		return
+	}
+	fmt.Println("Raw response:", string(bodyBytes))
+
 	var items []map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&items)
+	err = json.Unmarshal(bodyBytes, &items)
+	if err != nil {
+		sendMessage(bot, message.Chat.ID, "cannot show your items")
+		return
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		sendMessage(bot, message.Chat.ID, "you need to login to use this method")
 		return

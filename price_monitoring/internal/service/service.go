@@ -12,8 +12,6 @@ import (
 	proto "gitlab.crja72.ru/golang/2025/spring/course/projects/go2/price-tracker/price_monitoring/proto"
 )
 
-// "https://www.ozon.ru/product/zero-mileage-5w-30-maslo-motornoe-sinteticheskoe-1-l-1627408607/?at=Eqtk44V8ghrNGKRJTOPRG9LS0zoNA7UwDRn5mtNR6r8o"
-// https://www.wildberries.ru/catalog/154859676/detail.aspx
 type Service struct {
 	proto.UnimplementedScraperServer
 	Postg  *sql.DB
@@ -30,9 +28,14 @@ func (s *Service) GetItem(ctx context.Context, req *proto.GetItemRequest) (*prot
 
 	if err == sql.ErrNoRows {
 
+		status := "В наличие"
 		name, price, err := parser.Parser(req.Link)
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse this link: %v", err)
+			if err.Error() == "Товара нет в наличии" {
+				status = err.Error()
+			} else {
+				return nil, fmt.Errorf("cannot parse this link: %v", err)
+			}
 		}
 
 		id := uuid.New().String()
@@ -47,6 +50,7 @@ func (s *Service) GetItem(ctx context.Context, req *proto.GetItemRequest) (*prot
 			StartPrice:   price,
 			CurrentPrice: price,
 			DiffPrice:    0,
+			Status:       status,
 		}
 
 		return &proto.GetItemResponse{
@@ -57,9 +61,14 @@ func (s *Service) GetItem(ctx context.Context, req *proto.GetItemRequest) (*prot
 		return nil, err
 	}
 
+	status := "В наличие"
 	name, price, err := parser.Parser(req.Link)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse this link: %v", err)
+		if err.Error() == "Товара нет в наличии" {
+			status = err.Error()
+		} else {
+			return nil, fmt.Errorf("cannot parse this link: %v", err)
+		}
 	}
 
 	_, err = s.Postg.Exec("UPDATE auth.items SET current_price = $1 WHERE link = $2", price, req.Link)
@@ -72,6 +81,7 @@ func (s *Service) GetItem(ctx context.Context, req *proto.GetItemRequest) (*prot
 		StartPrice:   start_price,
 		CurrentPrice: price,
 		DiffPrice:    price - start_price,
+		Status:       status,
 	}
 
 	return &proto.GetItemResponse{
@@ -98,10 +108,14 @@ func (s *Service) GetAllItems(ctx context.Context, req *proto.GetAllItemsRequest
 		if err := rows.Scan(&start_price, &link); err != nil {
 			return nil, err
 		}
-
+		status := "В наличие"
 		name, price, err := parser.Parser(link)
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse this link: %v", err)
+			if err.Error() == "Товара нет в наличии" {
+				status = err.Error()
+			} else {
+				return nil, fmt.Errorf("cannot parse this link: %v", err)
+			}
 		}
 
 		items = append(items, &proto.ItemResponse{
@@ -109,6 +123,7 @@ func (s *Service) GetAllItems(ctx context.Context, req *proto.GetAllItemsRequest
 			StartPrice:   start_price,
 			CurrentPrice: price,
 			DiffPrice:    price - start_price,
+			Status:       status,
 		})
 	}
 

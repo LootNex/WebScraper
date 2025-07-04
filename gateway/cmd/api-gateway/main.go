@@ -167,7 +167,7 @@ func (s *GatewayServer) handleGetItem(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := s.trackerClient.GetItem(context.Background(), userID, req.Link)
 	if err != nil {
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf(`{"error": "%v"}`, err), http.StatusInternalServerError)
 		return
 	}
 
@@ -201,7 +201,7 @@ func (s *GatewayServer) handleGetAllItems(w http.ResponseWriter, r *http.Request
 
 	resp, err := s.trackerClient.GetAllItems(context.Background(), userID)
 	if err != nil {
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf(`{"error": "%v"}`, err), http.StatusInternalServerError)
 		return
 	}
 

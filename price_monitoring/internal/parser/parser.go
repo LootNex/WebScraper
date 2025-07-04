@@ -1,9 +1,10 @@
 package parser
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"os/exec"
-	"strconv"
-	"strings"
 )
 
 func Parser(link string) (string, float32, error) {
@@ -13,13 +14,26 @@ func Parser(link string) (string, float32, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	product_info := strings.Split(string(output[2:len(output)-2]), "'")
-	name := product_info[0]
-	product_price := product_info[1][2:]
-	price, err := strconv.Atoi(product_price)
-	if err != nil {
-		return "", 0, err
+
+	type parserOutput struct {
+		Name       string  `json:"name"`
+		Sale_price float32 `json:"sale_price"`
+		Error      string  `json:"error"`
 	}
 
-	return name, float32(price), nil
+	var result parserOutput
+
+	err = json.Unmarshal(output, &result)
+	if err != nil {
+		return "", 0, fmt.Errorf("invalid json from parser: %w", err)
+	}
+
+	if result.Error != "" {
+		if result.Error == "Товара нет в наличии" {
+			return result.Name, 0, errors.New(result.Error)
+		}
+		return "", 0, fmt.Errorf("parser error: %s", result.Error)
+	}
+
+	return result.Name, result.Sale_price, nil
 }
