@@ -15,13 +15,11 @@ func Parser(link string) (string, float32, error) {
 		return "", 0, err
 	}
 
-	type parserOutput struct {
+	var result struct {
 		Name       string  `json:"name"`
 		Sale_price float32 `json:"sale_price"`
 		Error      string  `json:"error"`
 	}
-
-	var result parserOutput
 
 	err = json.Unmarshal(output, &result)
 	if err != nil {

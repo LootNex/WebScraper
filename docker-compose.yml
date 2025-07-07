@@ -103,8 +103,6 @@ services:
     build:
       dockerfile: price_monitoring/Dockerfile
       context: .
-    env_file:
-      - price_monitoring/internal/db/config.env
     ports:
       - 50051:50051
     depends_on:
